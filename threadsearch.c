@@ -1,0 +1,94 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+int searchPosition(int i);
+void *searcher (void *arg);
+pthread_mutex_t nextlock;
+int result = -1;
+int textlen;
+int patlen;
+
+#define TEXT_LEN 1000000
+#define THREAD_NUM 4
+// Here I define the number of threads to be created
+
+// The pattern and text strings are global variables
+char *pattern;
+char text[TEXT_LEN];
+int next = 0;
+// This is a global variable to keep track of the next available position
+
+int main(int argc, char *argv[]) {
+
+   // Step 1: Extract the pattern string from the command line.   
+   
+	pattern = argv[1];
+	patlen = strlen(pattern);
+
+   // Step 2: Create and populate the text string.
+   // Note that it isn't a proper "string" in the C sense,
+   // because it doesn't end in '\0'.
+
+	textlen = TEXT_LEN; // will be overridden by the actual length
+	int count = 0;
+	while (count < TEXT_LEN) {
+		int status = scanf("%c", &text[count]);
+		count++;
+		if (status == EOF) {
+			textlen = count;
+			break;
+			}
+		}
+
+   // Step 3: Search for the pattern in the text string
+	pthread_t tid[THREAD_NUM];
+	int i;
+	for (i = 0; i < THREAD_NUM; i++) {
+		pthread_create(&tid[i], NULL, searcher, NULL);
+		}
+		// This creates the given number of threads to execute searcher
+	for (i = 0; i < THREAD_NUM; i++) {
+		pthread_join(tid[i], NULL);
+		}
+		// This joins the threads
+	
+	
+
+   // Step 4: Determine the result and print it
+
+	if (result == -1) {
+		printf("Pattern not found\n");
+		}
+	else {
+		printf("Pattern begins at character %d\n", result);
+		}
+	}
+
+void *searcher (void *arg) {
+	while ((next < (textlen - patlen)) && (result < 0)) {
+		int pos = next;
+		if (searchPosition(pos) == 1) {
+			result = pos; // This sets the result equal to the position when 						the pattern is found
+			break;
+			// This checks if the position contains the pattern
+			}
+		pthread_mutex_lock(&nextlock);
+			next += 1;
+		pthread_mutex_unlock(&nextlock);
+		// Here I am locking the value for next to avoid the threads checking the 			same value
+		}
+	}
+
+int searchPosition(int i) {
+	int j;
+	for (j=0;j<strlen(pattern); j++) {
+		if (text[i+j] != pattern[j]) {
+			return 0;
+			}
+		}
+	return 1;
+	}
+				
+
